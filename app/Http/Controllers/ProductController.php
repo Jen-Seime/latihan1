@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,17 +33,11 @@ class ProductController extends Controller
         return view('products.edit', compact('product'));
     }
 
-    public function update(Request $request, string $id): RedirectResponse
+    public function update(UpdateProductRequest $request, string $id): RedirectResponse
     {
         $product = Product::findOrFail($id);
 
-        $validated = $request->validate([
-            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
-            'title' => ['required', 'string', 'min:5', 'max:255'],
-            'description' => ['required', 'string', 'min:10', 'max:10000'],
-            'price' => ['required', 'integer', 'min:0', 'max:999999999999'],
-            'stock' => ['required', 'integer', 'min:0', 'max:2147483647'],
-        ]);
+        $validated = $request->validated();
 
         $data = [
             'title' => $validated['title'],
@@ -103,35 +99,9 @@ class ProductController extends Controller
         return view('products.show', compact('product'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreProductRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'image' => ['required', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
-            'title' => ['required', 'string', 'min:5', 'max:255'],
-            'description' => ['required', 'string', 'min:10', 'max:10000'],
-            'price' => ['required', 'integer', 'min:0', 'max:999999999999'],
-            'stock' => ['required', 'integer', 'min:0', 'max:2147483647'],
-        ], [
-            'required' => ':attribute wajib diisi.',
-            'image.image' => 'File harus berupa gambar.',
-            'image.mimes' => 'Gunakan gambar JPG, JPEG, atau PNG.',
-            'image.max' => 'Ukuran gambar maksimal 2048 KB (2 MB).',
-            'title.min' => 'Nama produk minimal 5 karakter.',
-            'title.max' => 'Nama produk maksimal 255 karakter.',
-            'description.min' => 'Deskripsi minimal 10 karakter.',
-            'description.max' => 'Deskripsi maksimal 10.000 karakter.',
-            'integer' => ':attribute harus berupa bilangan bulat.',
-            'price.min' => 'Harga tidak boleh negatif.',
-            'price.max' => 'Harga melebihi batas latihan.',
-            'stock.min' => 'Stok tidak boleh negatif.',
-            'stock.max' => 'Stok melebihi batas kolom database.',
-        ], [
-            'image' => 'Gambar',
-            'title' => 'Nama produk',
-            'description' => 'Deskripsi',
-            'price' => 'Harga',
-            'stock' => 'Stok',
-        ]);
+        $validated = $request->validated();
 
         $image = $request->file('image');
         $filename = $image->hashName();

@@ -31,8 +31,18 @@
             </div>
 
             @if (session('success'))
-                <div role="status" class="mb-4 rounded-lg bg-green-50 text-green-800 p-4">
+                <div role="status" class="mb-4 rounded-lg bg-green-50 border border-green-200 text-green-800 p-4">
                     {{ session('success') }}
+                </div>
+            @endif
+            @if (session('warning'))
+                <div role="status" class="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800 p-4">
+                    {{ session('warning') }}
+                </div>
+            @endif
+            @if (session('error'))
+                <div role="alert" class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-800 p-4">
+                    {{ session('error') }}
                 </div>
             @endif
 
