@@ -2,52 +2,80 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use PHPUnit\Event\Code\Throwable;
+use Throwable;
 
 class ProductController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $q = trim($filters['q'] ?? '');
+        $categoryId = $filters['category_id'] ?? null;
+        $categories = Category::orderBy('name')->get();
+        $query = Product::with('category');
+
+        if ($q !== '') {
+            // Kelompokkan OR agar tetap tunduk pada filter kategori.
+            $query->where(function ($subquery) use ($q) {
+                $subquery->where('title', 'like', '%'.$q.'%')
+                    ->orWhere('description', 'like', '%'.$q.'%');
+            });
+        }
+
+        if ($categoryId !== null) {
+            $query->where('category_id', $categoryId);
+        }
+
+        $products = $query->orderByDesc('id')->paginate(5)
+            ->appends(['q' => $q, 'category_id' => $categoryId]);
+
+        return view('products.index', compact('products', 'categories', 'q', 'categoryId'));
         $products = Product::latest()->paginate(10);
 
-        return view('products.index', compact('products'));
     }
 
     public function create(): View
     {
-        return view('products.create');
+        $categories = Category::orderBy('name')->get();
+
+        return view('products.create', compact('categories'));
+
     }
 
     public function edit(string $id): View
     {
         $product = Product::findOrFail($id);
+        $categories = Category::orderBy('name')->get();
 
-        return view('products.edit', compact('product'));
+        return view('products.edit', compact('product', 'categories'));
     }
 
-    public function update(Request $request, string $id): RedirectResponse
+    public function update(UpdateProductRequest $request, string $id): RedirectResponse
     {
         $product = Product::findOrFail($id);
 
-        $validated = $request->validate([
-            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
-            'title' => ['required', 'string', 'min:5', 'max:255'],
-            'description' => ['required', 'string', 'min:10', 'max:10000'],
-            'price' => ['required', 'integer', 'min:0', 'max:999999999999'],
-            'stock' => ['required', 'integer', 'min:0', 'max:2147483647'],
-        ]);
+        $validated = $request->validated();
 
         $data = [
             'title' => $validated['title'],
             'description' => $validated['description'],
             'price' => $validated['price'],
             'stock' => $validated['stock'],
+            'category_id' => $validated['category_id'],
         ];
 
         $oldImage = $product->image;
@@ -81,7 +109,7 @@ class ProductController extends Controller
         // Database sudah diperbarui; baru upayakan hapus gambar lama.
         if ($newPath !== null && $oldImage) {
             try {
-                $deleted = Storage::disk('public')->delete('products/' . $oldImage);
+                $deleted = Storage::disk('public')->delete('products/'.$oldImage);
 
                 if (! $deleted) {
                     report(new \RuntimeException('Gambar lama produk gagal dihapus.'));
@@ -95,7 +123,6 @@ class ProductController extends Controller
             ->with('success', 'Data produk berhasil diperbarui.');
     }
 
-
     public function show(string $id): View
     {
         $product = Product::findOrFail($id);
@@ -103,35 +130,9 @@ class ProductController extends Controller
         return view('products.show', compact('product'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreProductRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'image' => ['required', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
-            'title' => ['required', 'string', 'min:5', 'max:255'],
-            'description' => ['required', 'string', 'min:10', 'max:10000'],
-            'price' => ['required', 'integer', 'min:0', 'max:999999999999'],
-            'stock' => ['required', 'integer', 'min:0', 'max:2147483647'],
-        ], [
-            'required' => ':attribute wajib diisi.',
-            'image.image' => 'File harus berupa gambar.',
-            'image.mimes' => 'Gunakan gambar JPG, JPEG, atau PNG.',
-            'image.max' => 'Ukuran gambar maksimal 2048 KB (2 MB).',
-            'title.min' => 'Nama produk minimal 5 karakter.',
-            'title.max' => 'Nama produk maksimal 255 karakter.',
-            'description.min' => 'Deskripsi minimal 10 karakter.',
-            'description.max' => 'Deskripsi maksimal 10.000 karakter.',
-            'integer' => ':attribute harus berupa bilangan bulat.',
-            'price.min' => 'Harga tidak boleh negatif.',
-            'price.max' => 'Harga melebihi batas latihan.',
-            'stock.min' => 'Stok tidak boleh negatif.',
-            'stock.max' => 'Stok melebihi batas kolom database.',
-        ], [
-            'image' => 'Gambar',
-            'title' => 'Nama produk',
-            'description' => 'Deskripsi',
-            'price' => 'Harga',
-            'stock' => 'Stok',
-        ]);
+        $validated = $request->validated();
 
         $image = $request->file('image');
         $filename = $image->hashName();
@@ -149,6 +150,7 @@ class ProductController extends Controller
                 'description' => $validated['description'],
                 'price' => $validated['price'],
                 'stock' => $validated['stock'],
+                'category_id' => $validated['category_id'],
             ]);
         } catch (Throwable $exception) {
             // Upayakan pembersihan file jika insert database gagal.
@@ -163,33 +165,66 @@ class ProductController extends Controller
     public function destroy(string $id): RedirectResponse
     {
         $product = Product::findOrFail($id);
-        $image = $product->image;
 
-        // Hapus record lebih dahulu. Jika gagal, gambar belum disentuh.
         if (! $product->delete()) {
             return redirect()->route('products.index')
-                ->with('error', 'Data produk gagal dihapus. Silakan coba lagi.');
+                ->with('error', 'Produk gagal dipindahkan ke tempat sampah.');
         }
 
-        // Database dan filesystem tidak berada dalam satu transaksi.
-        // Jika pembersihan gagal, catat dan tampilkan peringatan.
+        // Soft delete: gambar tetap disimpan agar dapat dipulihkan.
+        return redirect()->route('products.index')
+            ->with('success', 'Produk dipindahkan ke tempat sampah. Gambar tetap disimpan.');
+    }
+
+    public function trash(): View
+    {
+        $products = Product::onlyTrashed()->with('category')
+            ->orderByDesc('deleted_at')->orderByDesc('id')->paginate(5);
+
+        return view('products.trash', compact('products'));
+    }
+
+    public function restore(string $id): RedirectResponse
+    {
+        $product = Product::onlyTrashed()->findOrFail($id);
+
+        if (! $product->restore()) {
+            return redirect()->route('products.trash')
+                ->with('error', 'Produk gagal dipulihkan.');
+        }
+
+        return redirect()->route('products.index')
+            ->with('success', 'Produk berhasil dipulihkan beserta referensi gambarnya.');
+    }
+
+    public function forceDestroy(string $id): RedirectResponse
+    {
+        // Hanya produk di tempat sampah yang boleh dihapus permanen.
+        $product = Product::onlyTrashed()->findOrFail($id);
+        $image = $product->image;
+
+        if (! $product->forceDelete()) {
+            return redirect()->route('products.trash')
+                ->with('error', 'Penghapusan permanen gagal.');
+        }
+
+        // Record sudah terhapus. Upayakan pembersihan file setelahnya.
         if ($image) {
             try {
-                if (! Storage::disk('public')->delete('products/' . $image)) {
-                    throw new \RuntimeException('File gambar produk gagal dihapus.');
+                if (! Storage::disk('public')->delete('products/'.$image)) {
+                    throw new \RuntimeException('Gagal menghapus gambar produk permanen.');
                 }
             } catch (Throwable $exception) {
                 report($exception);
 
-                return redirect()->route('products.index')->with(
+                return redirect()->route('products.trash')->with(
                     'warning',
-                    'Data produk sudah dihapus, tetapi gambar belum berhasil dibersihkan. Hubungi pengelola.'
+                    'Record sudah dihapus permanen, tetapi gambar gagal dibersihkan. Periksa log.'
                 );
             }
         }
 
-        return redirect()->route('products.index')
-            ->with('success', 'Data produk dan gambar terkait berhasil dihapus.');
+        return redirect()->route('products.trash')
+            ->with('success', 'Produk dan gambar terkait telah dihapus permanen.');
     }
-
 }

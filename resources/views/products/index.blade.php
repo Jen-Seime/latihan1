@@ -1,121 +1,83 @@
-<x-layout>
-     <main class="max-w-6xl mx-auto px-4 py-10">
-        <x-header judul="WBF Laravel • Bagian 04"></x-header>
-
-        @if (session('success'))
-            <div role="status" class="bg-green-100 text-green-900 border border-green-300 rounded-lg p-4 mb-4">
-                {{ session('success') }}
-            </div>
-        @endif
-        @if (session('warning'))
-            <div role="alert" class="bg-yellow-100 text-yellow-900 border border-yellow-400 rounded-lg p-4 mb-4">
-                {{ session('warning') }}
-            </div>
-        @endif
-        @if (session('error'))
-            <div role="alert" class="bg-red-100 text-red-900 border border-red-300 rounded-lg p-4 mb-4">
-                {{ session('error') }}
-            </div>
-        @endif
-
-        <section class="bg-white rounded-2xl border border-green-200 p-6">
-            <div class="flex flex-wrap items-center gap-3 mb-5">
-               <div class="flex flex-wrap items-center gap-3 mb-5">
-                    <a href="{{ route('products.create') }}"
-                    class="bg-green-800 hover:bg-green-900 text-white px-4 py-2 rounded-lg">
-                        Tambah Produk
-                    </a>
-                    <p class="text-sm text-slate-500">Tambahkan produk beserta gambar melalui form.</p>
-                </div>
-                <p class="text-sm text-slate-500">Fitur perubahan data belum diaktifkan.</p>
-            </div>
-
-            @if (session('success'))
-                <div role="status" class="mb-4 rounded-lg bg-green-50 text-green-800 p-4">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm border border-green-100">
-                    <thead class="bg-green-800 text-white">
-                        <tr>
-                            <th scope="col" class="px-4 py-3 text-left">Gambar</th>
-                            <th scope="col" class="px-4 py-3 text-left">Nama Produk</th>
-                            <th scope="col" class="px-4 py-3 text-left">Harga</th>
-                            <th scope="col" class="px-4 py-3 text-left">Stok</th>
-                            <th scope="col" class="px-4 py-3 text-left">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($products as $product)
-                            <tr class="border-b border-green-100">
-                                <td class="px-4 py-3">
-                                    <img
-                                        src="{{ asset('storage/products/' . $product->image) }}"
-                                        alt="{{ $product->title }}"
-                                        width="150" height="100" loading="lazy"
-                                        class="w-[150px] h-[100px] object-cover rounded-lg">
-                                </td>
-                                <td class="px-4 py-3 font-semibold">
-                                    {{ $product->title }}
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    {{ 'Rp ' . number_format($product->price, 2, ',', '.') }}
-                                </td>
-                                <td class="px-4 py-3">{{ $product->stock }}</td>
-                                <td class="px-4 py-3">
-                                    <div class="flex gap-2">
-                                        <a href="{{ route('products.show', $product->id) }}"
-                                        class="bg-green-800 hover:bg-green-900 text-white px-3 py-2 rounded">
-                                            Detail
-                                        </a>
-                                        <a href="{{ route('products.edit', $product->id) }}"
-                                         class="bg-yellow-300 hover:bg-yellow-400 text-green-900 px-3 py-2 rounded">
-                                            Edit
-                                        </a>
-                                        <form action="{{ route('products.destroy', $product->id) }}"
-                                            method="POST" class="inline"
-                                            onsubmit="return confirm('Hapus produk ini beserta gambarnya? Tindakan ini tidak dapat dibatalkan.');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                    class="bg-red-700 hover:bg-red-800 text-white px-3 py-2 rounded">
-                                                Hapus
-                                            </button>
-                                        </form>
-                                    </div>
-                                   
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="px-4 py-8 text-center">
-                                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-5">
-                                       <p class="mt-1 text-slate-600">Klik Tambah Produk untuk membuat data pertama.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="mt-5">{{ $products->links() }}</div>
-        </section>
-    </main>
-
-    @if (session('success'))
-        <script>
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil',
-                    text: {{ Illuminate\Support\Js::from(session('success')) }},
-                    timer: 3000,
-                    showConfirmButton: false
-                });
-            }
-        </script>
+@extends('layouts.app')
+@section('title', 'Produk Aktif')
+@section('content')
+@if ($errors->any())
+        <div class="notice" role="alert">
+            @foreach ($errors->all() as $error) <p>{{ $error }}</p> @endforeach
+            <a href="{{ route('products.index') }}">Buka daftar tanpa filter</a>
+        </div>
     @endif
-</x-layout>
+
+    <form class="filters" method="GET" action="{{ route('products.index') }}">
+        <div>
+            <label for="q">Cari produk</label>
+            <input id="q" name="q" value="{{ $q }}" maxlength="100"
+                placeholder="Nama atau deskripsi">
+        </div>
+        <div>
+            <label for="category_id">Filter kategori</label>
+            <select id="category_id" name="category_id">
+                <option value="">Semua kategori</option>
+                @foreach ($categories as $category)
+                    <option value="{{ $category->id }}"
+                        @selected((string) $categoryId === (string) $category->id)>
+                        {{ $category->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <button type="submit">Terapkan</button>
+        <a href="{{ route('products.index') }}">Reset</a>
+        @if (auth()->user()->isAdmin())
+            <a class="button" href="{{ route('products.create') }}">+ Produk</a>
+        @endif
+    </form>
+
+    <p><strong>{{ $products->total() }} produk ditemukan.</strong>
+        Menampilkan {{ $products->firstItem() ?? 0 }}–{{ $products->lastItem() ?? 0 }}.
+        @if ($q !== '') Kata kunci: “{{ $q }}”. @endif
+    </p>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>No.</th><th>Gambar</th><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stok</th><th>Aksi</th></tr></thead>
+            <tbody>
+                @forelse ($products as $product)
+                    <tr>
+                        <td>{{ $products->firstItem() + $loop->index }}</td>
+                        <td><img src="{{ asset('storage/products/' . $product->image) }}"
+                            alt="{{ $product->title }}" width="72" loading="lazy"></td>
+                        <td>{{ $product->title }}</td>
+                        <td>{{ $product->category?->name ?? 'Belum dikategorikan' }}</td>
+                        <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
+                        <td>{{ $product->stock }}</td>
+                        <td><div class="actions">
+                            <a href="{{ route('products.show', $product->id) }}">Detail</a>
+                            @if (auth()->user()->isAdmin())
+                            <a href="{{ route('products.edit', $product->id) }}">Edit</a>
+                            <form method="POST" action="{{ route('products.destroy', $product->id) }}"
+                                onsubmit="return confirm('Pindahkan produk ke tempat sampah? Gambar tetap disimpan.')">
+                                @csrf
+                                @method('DELETE')
+                                <button class="danger" type="submit">Ke tempat sampah</button>
+                            </form>
+                            @endif
+                        </div></td>
+                    </tr>
+                @empty
+                    <tr><td colspan="7">Tidak ada produk yang sesuai. Ubah filter atau klik Reset.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    <nav aria-label="Navigasi halaman produk">
+        @if ($products->previousPageUrl())
+            <a class="button" href="{{ $products->previousPageUrl() }}">← Sebelumnya</a>
+        @endif
+        <span>Halaman {{ $products->currentPage() }} dari {{ $products->lastPage() }}</span>
+        @if ($products->hasMorePages())
+            <a class="button" href="{{ $products->nextPageUrl() }}">Berikutnya →</a>
+        @endif
+    </nav>
+@endsection
