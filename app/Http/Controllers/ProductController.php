@@ -11,16 +11,16 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use PHPUnit\Event\Code\Throwable;
+use Throwable;
 
 class ProductController extends Controller
 {
     public function index(Request $request): View
     {
         $filters = $request->validate([
-        'q' => ['nullable', 'string', 'max:100'],
-        'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-        'page' => ['nullable', 'integer', 'min:1'],
+            'q' => ['nullable', 'string', 'max:100'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $q = trim($filters['q'] ?? '');
@@ -31,8 +31,8 @@ class ProductController extends Controller
         if ($q !== '') {
             // Kelompokkan OR agar tetap tunduk pada filter kategori.
             $query->where(function ($subquery) use ($q) {
-                $subquery->where('title', 'like', '%' . $q . '%')
-                    ->orWhere('description', 'like', '%' . $q . '%');
+                $subquery->where('title', 'like', '%'.$q.'%')
+                    ->orWhere('description', 'like', '%'.$q.'%');
             });
         }
 
@@ -44,9 +44,8 @@ class ProductController extends Controller
             ->appends(['q' => $q, 'category_id' => $categoryId]);
 
         return view('products.index', compact('products', 'categories', 'q', 'categoryId'));
-            $products = Product::latest()->paginate(10);
+        $products = Product::latest()->paginate(10);
 
-        
     }
 
     public function create(): View
@@ -54,7 +53,7 @@ class ProductController extends Controller
         $categories = Category::orderBy('name')->get();
 
         return view('products.create', compact('categories'));
-        
+
     }
 
     public function edit(string $id): View
@@ -110,7 +109,7 @@ class ProductController extends Controller
         // Database sudah diperbarui; baru upayakan hapus gambar lama.
         if ($newPath !== null && $oldImage) {
             try {
-                $deleted = Storage::disk('public')->delete('products/' . $oldImage);
+                $deleted = Storage::disk('public')->delete('products/'.$oldImage);
 
                 if (! $deleted) {
                     report(new \RuntimeException('Gambar lama produk gagal dihapus.'));
@@ -124,7 +123,6 @@ class ProductController extends Controller
             ->with('success', 'Data produk berhasil diperbarui.');
     }
 
-
     public function show(string $id): View
     {
         $product = Product::findOrFail($id);
@@ -135,7 +133,6 @@ class ProductController extends Controller
     public function store(StoreProductRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        
 
         $image = $request->file('image');
         $filename = $image->hashName();
@@ -168,33 +165,66 @@ class ProductController extends Controller
     public function destroy(string $id): RedirectResponse
     {
         $product = Product::findOrFail($id);
-        $image = $product->image;
 
-        // Hapus record lebih dahulu. Jika gagal, gambar belum disentuh.
         if (! $product->delete()) {
             return redirect()->route('products.index')
-                ->with('error', 'Data produk gagal dihapus. Silakan coba lagi.');
+                ->with('error', 'Produk gagal dipindahkan ke tempat sampah.');
         }
 
-        // Database dan filesystem tidak berada dalam satu transaksi.
-        // Jika pembersihan gagal, catat dan tampilkan peringatan.
+        // Soft delete: gambar tetap disimpan agar dapat dipulihkan.
+        return redirect()->route('products.index')
+            ->with('success', 'Produk dipindahkan ke tempat sampah. Gambar tetap disimpan.');
+    }
+
+    public function trash(): View
+    {
+        $products = Product::onlyTrashed()->with('category')
+            ->orderByDesc('deleted_at')->orderByDesc('id')->paginate(5);
+
+        return view('products.trash', compact('products'));
+    }
+
+    public function restore(string $id): RedirectResponse
+    {
+        $product = Product::onlyTrashed()->findOrFail($id);
+
+        if (! $product->restore()) {
+            return redirect()->route('products.trash')
+                ->with('error', 'Produk gagal dipulihkan.');
+        }
+
+        return redirect()->route('products.index')
+            ->with('success', 'Produk berhasil dipulihkan beserta referensi gambarnya.');
+    }
+
+    public function forceDestroy(string $id): RedirectResponse
+    {
+        // Hanya produk di tempat sampah yang boleh dihapus permanen.
+        $product = Product::onlyTrashed()->findOrFail($id);
+        $image = $product->image;
+
+        if (! $product->forceDelete()) {
+            return redirect()->route('products.trash')
+                ->with('error', 'Penghapusan permanen gagal.');
+        }
+
+        // Record sudah terhapus. Upayakan pembersihan file setelahnya.
         if ($image) {
             try {
-                if (! Storage::disk('public')->delete('products/' . $image)) {
-                    throw new \RuntimeException('File gambar produk gagal dihapus.');
+                if (! Storage::disk('public')->delete('products/'.$image)) {
+                    throw new \RuntimeException('Gagal menghapus gambar produk permanen.');
                 }
             } catch (Throwable $exception) {
                 report($exception);
 
-                return redirect()->route('products.index')->with(
+                return redirect()->route('products.trash')->with(
                     'warning',
-                    'Data produk sudah dihapus, tetapi gambar belum berhasil dibersihkan. Hubungi pengelola.'
+                    'Record sudah dihapus permanen, tetapi gambar gagal dibersihkan. Periksa log.'
                 );
             }
         }
 
-        return redirect()->route('products.index')
-            ->with('success', 'Data produk dan gambar terkait berhasil dihapus.');
+        return redirect()->route('products.trash')
+            ->with('success', 'Produk dan gambar terkait telah dihapus permanen.');
     }
-
 }

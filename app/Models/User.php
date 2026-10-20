@@ -18,6 +18,7 @@ class User extends Authenticatable
     {
         return $this->role === 'admin';
     }
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 

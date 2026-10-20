@@ -49,7 +49,7 @@ class AuthController extends Controller
             'password.confirmed' => 'Konfirmasi password tidak sama.',
         ], ['name' => 'Nama', 'email' => 'Email', 'password' => 'Password']);
 
-        $user = new User();
+        $user = new User;
         $user->name = $data['name'];
         $user->email = $data['email'];
         $user->password = Hash::make($data['password']);
@@ -59,7 +59,7 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('products.index')
+        return redirect()->route('dashboard')
             ->with('success', 'Registrasi berhasil. Anda masuk sebagai pengguna.');
     }
 
@@ -81,7 +81,7 @@ class AuthController extends Controller
             'max' => ':attribute terlalu panjang.',
         ], ['email' => 'Email', 'password' => 'Password']);
 
-        $key = 'login:' . hash('sha256', $credentials['email'] . '|' . $request->ip());
+        $key = 'login:'.hash('sha256', $credentials['email'].'|'.$request->ip());
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
@@ -101,8 +101,8 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         // Tujuan tetap agar pengguna tidak diarahkan ke halaman admin yang ditolak.
-        return redirect()->route('products.index')
-            ->with('success', 'Login berhasil. Selamat datang.');
+        return redirect()->route('dashboard')
+            ->with('success', 'Berhasil masuk. Selamat datang di dashboard.');
     }
 
     public function logout(Request $request): RedirectResponse
