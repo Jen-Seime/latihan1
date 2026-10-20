@@ -15,6 +15,7 @@ class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'category_id' => ['bail', 'required', 'integer', 'exists:categories,id'],
             'title' => ['bail', 'required', 'string', 'min:5', 'max:255'],
             'description' => ['bail', 'required', 'string', 'min:10', 'max:10000'],
             'price' => ['bail', 'required', 'integer', 'min:0', 'max:999999999999'],
@@ -41,6 +42,8 @@ class StoreProductRequest extends FormRequest
             'image.mimes' => 'Gunakan gambar JPG, JPEG, atau PNG.',
             'image.max' => 'Ukuran gambar maksimal 2048 KB (2 MB).',
             'image.uploaded' => 'Upload gagal. Periksa ukuran file dan konfigurasi PHP.',
+            'category_id.required' => 'Pilih kategori produk.',
+            'category_id.exists' => 'Kategori yang dipilih tidak tersedia.',
         ];
     }
 
@@ -49,6 +52,7 @@ class StoreProductRequest extends FormRequest
         return [
             'title' => 'Nama produk', 'description' => 'Deskripsi',
             'price' => 'Harga', 'stock' => 'Stok', 'image' => 'Gambar',
+            'category_id' => 'Kategori',
         ];
     }
 }

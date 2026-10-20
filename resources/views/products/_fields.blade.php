@@ -9,6 +9,8 @@
     </div>
 @endif
 
+
+
 {{-- Gambar Produk --}}
 <div>
     <label for="image" class="block font-semibold mb-2">
@@ -40,6 +42,24 @@
         <p id="preview-status" class="text-sm text-slate-600 mt-1" role="status"></p>
     </div>
 </div>
+
+
+{{-- Kategori Produk --}}
+<div>
+    <label for="category_id" class="block font-semibold mb-2">Kategori Produk</label>
+    <select id="category_id" name="category_id" required aria-describedby="category_id-error"
+        class="w-full border rounded-lg p-3 bg-white @error('category_id') border-red-500 @else border-green-200 @enderror">
+        <option value="">-- Pilih Kategori --</option>
+        @foreach ($categories as $category)
+            <option value="{{ $category->id }}"
+                @selected((string) old('category_id', $product->category_id ?? '') === (string) $category->id)>
+                {{ $category->name }}
+            </option>
+        @endforeach
+    </select>
+    <p id="category_id-error" class="text-sm text-red-700 mt-1">@error('category_id') {{ $message }} @enderror</p>
+</div>
+
 
 {{-- Nama Produk --}}
 <div>

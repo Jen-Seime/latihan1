@@ -1,6 +1,10 @@
 <x-layout>
      <main class="max-w-4xl mx-auto px-4 py-10">
-        <x-header judul="WBF Laravel • Bagian 05"></x-header>
+        
+
+        <title>Bagian 11 | WBF Laravel</title>
+
+        @include('products._authbar')
 
         <section class="bg-white rounded-2xl border border-green-200 p-6">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-6">

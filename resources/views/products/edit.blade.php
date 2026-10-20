@@ -1,10 +1,9 @@
 <x-layout>
     <main class="max-w-4xl mx-auto px-4 py-10">
-        <header class="bg-yellow-300 border-2 border-green-900 rounded-2xl p-6 mb-6">
-            <p class="text-sm font-semibold text-green-900">WBF Laravel • Bagian 07</p>
-            <h1 class="text-3xl font-bold mt-2">Edit Produk</h1>
-            <p class="mt-2">MK Website Berbasis Framework — Laravel 13</p>
-        </header>
+       <title>Bagian 11 | WBF Laravel</title>
+
+        @include('products._authbar')
+        
 
         <section class="bg-white rounded-2xl border border-green-200 p-6">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
