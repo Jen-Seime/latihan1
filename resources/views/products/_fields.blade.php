@@ -27,7 +27,7 @@
     @endif
 
     <input type="file" name="image" id="image"
-        accept="image/jpeg,image/png" aria-describedby="image-help image-error"
+        {{-- accept="image/jpeg,image/png" aria-describedby="image-help image-error" --}}
         @required(! isset($product))
         class="block w-full border rounded-lg p-3 @error('image') border-red-500 @else border-green-200 @enderror">
     <p id="image-help" class="text-sm text-slate-500 mt-1">
@@ -65,7 +65,7 @@
 <div>
     <label for="title" class="block font-semibold mb-2">Nama Produk</label>
     <input type="text" name="title" id="title" value="{{ old('title', $product->title ?? '') }}"
-        required minlength="5" maxlength="255" aria-describedby="title-error"
+        {{-- required minlength="5" maxlength="255" aria-describedby="title-error" --}}
         placeholder="Contoh: Keyboard Wireless"
         class="w-full border rounded-lg p-3 @error('title') border-red-500 @else border-green-200 @enderror">
     <p id="title-error" class="text-sm text-red-700 mt-1">@error('title') {{ $message }} @enderror</p>
@@ -75,7 +75,7 @@
 <div>
     <label for="description" class="block font-semibold mb-2">Deskripsi</label>
     <textarea name="description" id="description" rows="5" required
-        minlength="10" maxlength="10000" aria-describedby="description-error"
+        {{-- minlength="10" maxlength="10000" aria-describedby="description-error" --}}
         placeholder="Tuliskan deskripsi produk minimal 10 karakter."
         class="w-full border rounded-lg p-3 @error('description') border-red-500 @else border-green-200 @enderror">{{ old('description', $product->description ?? '') }}</textarea>
     <p id="description-error" class="text-sm text-red-700 mt-1">@error('description') {{ $message }} @enderror</p>
@@ -86,7 +86,7 @@
     <div>
         <label for="price" class="block font-semibold mb-2">Harga (Rupiah)</label>
         <input type="number" name="price" id="price" value="{{ old('price', $product->price ?? '') }}"
-            min="0" max="999999999999" step="1" required aria-describedby="price-help price-error"
+            {{-- min="0" max="999999999999" step="1" required aria-describedby="price-help price-error" --}}
             placeholder="150000"
             class="w-full border rounded-lg p-3 @error('price') border-red-500 @else border-green-200 @enderror">
         <p id="price-help" class="text-sm text-slate-500 mt-1">Angka bulat, tanpa Rp atau pemisah ribuan.</p>
